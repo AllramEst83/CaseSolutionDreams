@@ -21,6 +21,6 @@ namespace Auth.Service.API.Services
             RoleManager = roleManager;
         }
 
-
+        //Delete this class???
     }
 }

@@ -20,6 +20,7 @@ namespace Auth.Service.API.Services
     public class JwtService : IJwtService
     {
         private readonly JwtIssuerOptions _jwtOptions;
+
         public JwtService(UserManager<User> userManager, IOptions<JwtIssuerOptions> jwtOptions)
         {
             _jwtOptions = jwtOptions.Value;

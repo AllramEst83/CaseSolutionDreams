@@ -128,7 +128,5 @@ namespace Auth.Service.API.Services
 
             return userRoles;
         }
-
-
     }
 }
