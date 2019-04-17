@@ -13,7 +13,13 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Entities\" />
+    <Folder Include="Services\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="Auth.Db">
+      <HintPath>..\..\Auth.Db\Auth.Db\bin\Debug\netcoreapp2.2\Auth.Db.dll</HintPath>
+    </Reference>
   </ItemGroup>
 
 </Project>
