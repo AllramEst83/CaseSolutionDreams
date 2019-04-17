@@ -1,18 +1,20 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Auth.Db;
+﻿using Auth.Service.API.Entities;
+using Auth.Service.API.Entities.Context;
+using Auth.Service.API.Interfaces;
 using Auth.Service.API.Models;
+using Auth.Service.API.Services;
+using AutoMapper;
+using CaseSolutionsTokenValidationParameters;
 using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.HttpsPolicy;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
 
 namespace Auth.Service.API
 {
@@ -29,11 +31,56 @@ namespace Auth.Service.API
         public void ConfigureServices(IServiceCollection services)
         {
             string section = "AppSettings";
+            string assemblyName = "Auth.Service.API";
             IConfigurationSection configuration = Configuration.GetSection(section);
             services.Configure<AppSettings>(configuration);
             AppSettings appsettings = configuration.Get<AppSettings>();
 
-            services.GenerateAuthDB(appsettings.AuthDbConnectionString);
+            services.AddDbContext<UserContext>(options =>
+            {
+                options.UseSqlServer(appsettings.AuthDbConnectionString,
+                    migrationOptions =>
+                    {
+                        migrationOptions.MigrationsAssembly(assemblyName);
+                    });
+            });
+
+            SymmetricSecurityKey _signingKey = new SymmetricSecurityKey(Encoding.ASCII.GetBytes(appsettings.Secret));
+            SigningCredentials signingCredentials = new SigningCredentials(_signingKey, SecurityAlgorithms.HmacSha256);
+
+            services.Configure<JwtIssuerOptions>(options =>
+            {
+                options.Issuer = appsettings.Issuer;
+                options.Audience = appsettings.Audience;
+                options.SigningCredentials = signingCredentials;
+            });
+
+            IdentityBuilder builder = services.AddIdentityCore<User>(o =>
+            {
+                // configure identity options
+                o.Password.RequireDigit = false;
+                o.Password.RequireLowercase = false;
+                o.Password.RequireUppercase = false;
+                o.Password.RequireNonAlphanumeric = false;
+                o.Password.RequiredLength = 6;
+            });
+            builder = new IdentityBuilder(builder.UserType, typeof(IdentityRole), builder.Services);
+            builder
+                .AddEntityFrameworkStores<UserContext>()
+                .AddDefaultTokenProviders()
+                .AddRoles<IdentityRole>();
+
+            services.AddValidationParameters(
+              appsettings.Issuer,
+              appsettings.Audience,
+              _signingKey
+              );
+
+            services.AddScoped<IAuthService, AuthService>();
+            services.AddScoped<IAccountService, AccountService>();
+            services.AddScoped<IJwtService, JwtService>();
+
+            services.AddAutoMapper();
 
             services.AddMvc()
                 .SetCompatibilityVersion(CompatibilityVersion.Version_2_2)
@@ -54,6 +101,7 @@ namespace Auth.Service.API
             }
 
             app.UseHttpsRedirection();
+            app.UseAuthentication();
             app.UseMvc();
         }
     }

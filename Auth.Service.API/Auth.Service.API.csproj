@@ -6,19 +6,21 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="AutoMapper" Version="8.0.0" />
+    <PackageReference Include="AutoMapper.Extensions.Microsoft.DependencyInjection" Version="6.0.0" />
     <PackageReference Include="FluentValidation.AspNetCore" Version="8.2.2" />
     <PackageReference Include="Microsoft.AspNetCore.App" />
     <PackageReference Include="Microsoft.AspNetCore.Razor.Design" Version="2.2.0" PrivateAssets="All" />
+    <PackageReference Include="Microsoft.IdentityModel.Tokens" Version="5.4.0" />
     <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="2.2.3" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Services\" />
   </ItemGroup>
 
   <ItemGroup>
     <Reference Include="Auth.Db">
       <HintPath>..\..\Auth.Db\Auth.Db\bin\Debug\netcoreapp2.2\Auth.Db.dll</HintPath>
+    </Reference>
+    <Reference Include="CaseSolutionsTokenValidationParameters">
+      <HintPath>..\..\CaseSolutionsTokenValidationParameters\CaseSolutionsTokenValidationParameters\bin\Debug\netcoreapp2.2\CaseSolutionsTokenValidationParameters.dll</HintPath>
     </Reference>
   </ItemGroup>
 
