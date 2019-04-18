@@ -13,6 +13,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 
@@ -20,12 +21,14 @@ namespace Auth.Service.API
 {
     public class Startup
     {
-        public Startup(IConfiguration configuration)
+        public Startup(IConfiguration configuration, ILogger<Startup> logger)
         {
             Configuration = configuration;
+            _logger = logger;
         }
 
         public IConfiguration Configuration { get; }
+        public ILogger<Startup> _logger { get; }
 
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
@@ -43,6 +46,9 @@ namespace Auth.Service.API
                     {
                         migrationOptions.MigrationsAssembly(assemblyName);
                     });
+
+                _logger.LogInformation("Database connection established");
+
             });
 
             SymmetricSecurityKey _signingKey = new SymmetricSecurityKey(Encoding.ASCII.GetBytes(appsettings.Secret));
@@ -70,15 +76,21 @@ namespace Auth.Service.API
                 .AddDefaultTokenProviders()
                 .AddRoles<IdentityRole>();
 
+            _logger.LogInformation("Authentication configuration has finsihed");
+
             services.AddValidationParameters(
               appsettings.Issuer,
               appsettings.Audience,
               _signingKey
               );
 
+            _logger.LogInformation("Validation is setup.");
+
             services.AddScoped<IAuthService, AuthService>();
             services.AddScoped<IAccountService, AccountService>();
             services.AddScoped<IJwtService, JwtService>();
+
+            _logger.LogInformation("Services has been added");
 
             services.AddAutoMapper();
 
@@ -93,6 +105,7 @@ namespace Auth.Service.API
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
+                _logger.LogInformation("In Development environment");
             }
             else
             {

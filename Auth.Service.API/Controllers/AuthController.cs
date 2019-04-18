@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Security.Claims;
@@ -16,6 +17,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 
@@ -31,6 +33,9 @@ namespace Auth.Service.API.Controllers
         public UserContext Context { get; }
         public RoleManager<IdentityRole> RoleManager { get; }
         public IJwtService JwtService { get; }
+        public ILogger<AuthController> Logger { get; }
+        public AppSettings AppSettings { get; }
+
         private readonly JwtIssuerOptions _jwtOptions;
 
         public AuthController(
@@ -40,7 +45,9 @@ namespace Auth.Service.API.Controllers
             UserContext context,
             RoleManager<IdentityRole> roleManager,
             IJwtService jwtService,
-            IOptions<JwtIssuerOptions> jwtOptions)
+            IOptions<JwtIssuerOptions> jwtOptions,
+            ILogger<AuthController> logger,
+            IOptions<AppSettings> options)
         {
             AuthService = authService;
             AccountService = accountService;
@@ -48,6 +55,8 @@ namespace Auth.Service.API.Controllers
             Context = context;
             RoleManager = roleManager;
             JwtService = jwtService;
+            Logger = logger;
+            AppSettings = options.Value;
             _jwtOptions = jwtOptions.Value;
         }
 
@@ -55,6 +64,7 @@ namespace Auth.Service.API.Controllers
         [HttpGet]
         public IActionResult Ping()
         {
+            Logger.LogInformation("AuthController was pinged.");
             return new JsonResult(new { message = "AuthController is online!" });
         }
 
@@ -62,13 +72,17 @@ namespace Auth.Service.API.Controllers
         [HttpGet]
         public IActionResult AdminAuthTest()
         {
-            return new OkObjectResult(new { message ="Adimn authentication works"});
+            Logger.LogInformation("AdminAuthTest action has been requested.");
+
+            return new OkObjectResult(new { message = "Adimn authentication works" });
         }
 
         [Authorize(Policy = TokenValidationConstants.Policies.AuthAPIEditUser)]
         [HttpGet]
         public IActionResult EditAuthTest()
         {
+            Logger.LogInformation("EditAuthTest action has been requested.");
+
             return new OkObjectResult(new { message = "Edit authentication works" });
         }
 
@@ -76,6 +90,8 @@ namespace Auth.Service.API.Controllers
         [HttpGet]
         public IActionResult CommonAuthTest()
         {
+            Logger.LogInformation("CommonAuthTest action has been requested.");
+
             return new OkObjectResult(new { message = "Common authentication works" });
         }
 
@@ -88,12 +104,18 @@ namespace Auth.Service.API.Controllers
 
             if (!result)
             {
-                listOfRoles = new List<IdentityRole>()
+                List<RolesSeedModel> seedData = null;
+                using (StreamReader reader = new StreamReader(AppSettings.AuthSeedData))
                 {
-                    new IdentityRole(){Name = TokenValidationConstants.Roles.AdminAccess},
-                    new IdentityRole(){Name = TokenValidationConstants.Roles.EditUserAccess},
-                    new IdentityRole(){Name = TokenValidationConstants.Roles.CommonUserAccess},
-                };
+                    string json = reader.ReadToEnd();
+                    seedData = JsonConvert.DeserializeObject<List<RolesSeedModel>>(json);
+                }
+
+                listOfRoles = seedData.Select(x => new IdentityRole()
+                {
+                    Name = x.Role
+
+                }).ToList();
 
                 foreach (IdentityRole role in listOfRoles)
                 {
@@ -103,6 +125,8 @@ namespace Auth.Service.API.Controllers
 
             }
 
+            Logger.LogInformation("Roles have been seeded successfully: ", listOfRoles);
+
             return new JsonResult(new { message = "Roles have been seeded successfully.", Roles = listOfRoles });
         }
 
@@ -111,6 +135,8 @@ namespace Auth.Service.API.Controllers
         [HttpPost]
         public async Task<IActionResult> Signup([FromBody] RegistrationViewModel model)
         {
+            Logger.LogInformation("Signup action has been requested.");
+
             if (!ModelState.IsValid)
             {
                 return new OkObjectResult(new { messsage = "build error" });
@@ -119,6 +145,8 @@ namespace Auth.Service.API.Controllers
             string userEmail = model.Email.Trim();
             if (await AccountService.UserExistByUserName(userEmail))
             {
+                Logger.LogInformation("The supplyed user already exists");
+
                 return new JsonResult(new SignupResponseModel()
                 {
                     Content = new { },
@@ -131,6 +159,8 @@ namespace Auth.Service.API.Controllers
             string userRole = model.Role.Trim();
             if (!await AccountService.RoleExists(userRole))
             {
+                Logger.LogInformation("Role to add to user does not exists");
+
                 return new JsonResult(new SignupResponseModel()
                 {
                     Content = new { },
@@ -145,6 +175,8 @@ namespace Auth.Service.API.Controllers
             IdentityResult addUserResult = await AccountService.CreateUser(userIdentity, password);
             if (!addUserResult.Succeeded)
             {
+                Logger.LogInformation("Creating a user account faild");
+
                 return new JsonResult(new SignupResponseModel()
                 {
                     Content = new { },
@@ -157,6 +189,8 @@ namespace Auth.Service.API.Controllers
             IdentityResult addRoleResult = await AccountService.AddRoleToUser(userIdentity, userRole);
             if (!addRoleResult.Succeeded)
             {
+                Logger.LogInformation("Linking role to user faild");
+
                 return new JsonResult(new SignupResponseModel()
                 {
                     Content = new { },
@@ -172,6 +206,8 @@ namespace Auth.Service.API.Controllers
 
             EndUser endUser = Mapper.Map<EndUser>(userIdentity);
 
+            Logger.LogInformation("User has successfully been created and role has been linked");
+
             return new OkObjectResult(new SignupResponseModel()
             {
                 Content = new { user = endUser, userRoles = userRoles },
@@ -186,8 +222,12 @@ namespace Auth.Service.API.Controllers
         [HttpPost]
         public async Task<IActionResult> Login(LoginViewModel model)
         {
+            Logger.LogInformation("Login action has been requested.");
+
             if (!ModelState.IsValid)
             {
+                Logger.LogInformation("Bad request, ModelState is invalid");
+
                 return new OkObjectResult(new LoginResponseModel()
                 {
                     Content = new { },
@@ -200,9 +240,11 @@ namespace Auth.Service.API.Controllers
             ClaimsIdentity identity = await JwtService.GetClaimsIdentity(model.UserName, model.Password);
             if (identity == null)
             {
+                Logger.LogInformation("Faild to get user claims.");
+
                 return new JsonResult(new LoginResponseModel()
                 {
-                    Content= new { },
+                    Content = new { },
                     StatusCode = HttpStatusCode.Unauthorized,
                     Error = "login_failure",
                     Description = "Faild to login. Please verify your username or password."
@@ -212,6 +254,8 @@ namespace Auth.Service.API.Controllers
 
             string jwtResponse = await JwtService
                 .GenerateJwt(identity, JwtService, model.UserName, _jwtOptions, new JsonSerializerSettings { Formatting = Formatting.Indented });
+
+            Logger.LogInformation("JwtToken has succesfully been created");
 
             return new OkObjectResult(jwtResponse);
         }

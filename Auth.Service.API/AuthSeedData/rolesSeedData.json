@@ -1,0 +1,5 @@
+[
+  { "Role": "admin_access" },
+  { "Role": "common_user_access" },
+  { "Role": "edit_user_access" }
+]

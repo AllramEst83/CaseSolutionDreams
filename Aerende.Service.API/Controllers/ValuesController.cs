@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Aerende.Service.API.Models;
 using Newtonsoft.Json;
+using Microsoft.Extensions.Options;
 
 namespace Aerende.Service.API.Controllers
 {
@@ -13,13 +14,19 @@ namespace Aerende.Service.API.Controllers
     [ApiController]
     public class ValuesController : ControllerBase
     {
+        public AppSettings AppSettings { get; }
+
+        public ValuesController(IOptions<AppSettings> options)
+        {
+            AppSettings = options.Value;
+        }
         // GET api/values
         [HttpGet]
         public ActionResult<IEnumerable<Patients>> Get()
         {
             //Använd denna metod för att SeedaData i Auth och Aerende
             List<Patients> items = null;
-            using (StreamReader reader = new StreamReader("C:/Users/kaywi/Source/Repos/CaseSolutionDreams/Aerende.Service.API/SeedData/seedData.json"))
+            using (StreamReader reader = new StreamReader(AppSettings.SeedData))
             {
                 string json = reader.ReadToEnd();
                items = JsonConvert.DeserializeObject<List<Patients>>(json);
