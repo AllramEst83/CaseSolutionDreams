@@ -139,13 +139,19 @@ namespace Auth.Service.API.Controllers
 
             if (!ModelState.IsValid)
             {
-                return new OkObjectResult(new { messsage = "build error" });
+                return new OkObjectResult(new SignupResponseModel()
+                {
+                    Content = new { },
+                    StatusCode = HttpStatusCode.BadRequest,
+                    Error = "bad_request",
+                    Description ="Username or password cannot be empty"
+                });
             }
 
             string userEmail = model.Email.Trim();
             if (await AccountService.UserExistByUserName(userEmail))
             {
-                Logger.LogInformation("The supplyed user already exists");
+                Logger.LogWarning("The supplyed user already exists");
 
                 return new JsonResult(new SignupResponseModel()
                 {
@@ -159,7 +165,7 @@ namespace Auth.Service.API.Controllers
             string userRole = model.Role.Trim();
             if (!await AccountService.RoleExists(userRole))
             {
-                Logger.LogInformation("Role to add to user does not exists");
+                Logger.LogWarning("Role to add to user does not exists");
 
                 return new JsonResult(new SignupResponseModel()
                 {
@@ -175,7 +181,7 @@ namespace Auth.Service.API.Controllers
             IdentityResult addUserResult = await AccountService.CreateUser(userIdentity, password);
             if (!addUserResult.Succeeded)
             {
-                Logger.LogInformation("Creating a user account faild");
+                Logger.LogWarning("Creating a user account faild");
 
                 return new JsonResult(new SignupResponseModel()
                 {
@@ -189,7 +195,7 @@ namespace Auth.Service.API.Controllers
             IdentityResult addRoleResult = await AccountService.AddRoleToUser(userIdentity, userRole);
             if (!addRoleResult.Succeeded)
             {
-                Logger.LogInformation("Linking role to user faild");
+                Logger.LogWarning("Linking role to user faild");
 
                 return new JsonResult(new SignupResponseModel()
                 {
@@ -226,7 +232,7 @@ namespace Auth.Service.API.Controllers
 
             if (!ModelState.IsValid)
             {
-                Logger.LogInformation("Bad request, ModelState is invalid");
+                Logger.LogWarning("Bad request, ModelState is invalid");
 
                 return new OkObjectResult(new LoginResponseModel()
                 {
@@ -240,7 +246,7 @@ namespace Auth.Service.API.Controllers
             ClaimsIdentity identity = await JwtService.GetClaimsIdentity(model.UserName, model.Password);
             if (identity == null)
             {
-                Logger.LogInformation("Faild to get user claims.");
+                Logger.LogWarning("Faild to get user claims.");
 
                 return new JsonResult(new LoginResponseModel()
                 {
