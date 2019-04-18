@@ -24,11 +24,12 @@ namespace Auth.Service.API
         public Startup(IConfiguration configuration, ILogger<Startup> logger)
         {
             Configuration = configuration;
-            _logger = logger;
+            Logger = logger;
+          
         }
 
         public IConfiguration Configuration { get; }
-        public ILogger<Startup> _logger { get; }
+        public ILogger<Startup> Logger { get; }
 
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
@@ -47,7 +48,7 @@ namespace Auth.Service.API
                         migrationOptions.MigrationsAssembly(assemblyName);
                     });
 
-                _logger.LogInformation("Database connection established");
+                Logger.LogInformation("Database connection established");
 
             });
 
@@ -76,7 +77,7 @@ namespace Auth.Service.API
                 .AddDefaultTokenProviders()
                 .AddRoles<IdentityRole>();
 
-            _logger.LogInformation("Authentication configuration has finsihed");
+            Logger.LogInformation("Authentication configuration has finsihed");
 
             services.AddValidationParameters(
               appsettings.Issuer,
@@ -84,13 +85,13 @@ namespace Auth.Service.API
               _signingKey
               );
 
-            _logger.LogInformation("Validation is setup.");
+            Logger.LogInformation("Validation is setup.");
 
             services.AddScoped<IAuthService, AuthService>();
             services.AddScoped<IAccountService, AccountService>();
             services.AddScoped<IJwtService, JwtService>();
 
-            _logger.LogInformation("Services has been added");
+            Logger.LogInformation("Services has been added");
 
             services.AddAutoMapper();
 
@@ -105,7 +106,7 @@ namespace Auth.Service.API
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
-                _logger.LogInformation("In Development environment");
+                Logger.LogInformation("In Development environment");
             }
             else
             {

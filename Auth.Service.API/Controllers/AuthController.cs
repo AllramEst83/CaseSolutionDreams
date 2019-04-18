@@ -57,7 +57,7 @@ namespace Auth.Service.API.Controllers
             JwtService = jwtService;
             Logger = logger;
             AppSettings = options.Value;
-            _jwtOptions = jwtOptions.Value;
+            _jwtOptions = jwtOptions.Value;         
         }
 
         [AllowAnonymous]

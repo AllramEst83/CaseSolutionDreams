@@ -24,7 +24,7 @@ namespace Auth.Service.API
                 IHostingEnvironment env = hostingContext.HostingEnvironment;
 
                 config.AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
-                
+
                 .AddJsonFile($"appsettings.{env.EnvironmentName}.json",
                       optional: true, reloadOnChange: true);
 
@@ -33,9 +33,11 @@ namespace Auth.Service.API
                 .ConfigureLogging((hostingContext, logging) =>
                 {
                     logging.AddConfiguration(hostingContext.Configuration.GetSection("Logging"));
+                    logging.AddFile("Logs/myapp-{Date}.txt", isJson: true);
                     logging.AddConsole();
                     logging.AddDebug();
                     logging.AddEventSourceLogger();
+                  
                 })
                 .UseStartup<Startup>();
 
